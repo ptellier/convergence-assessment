@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const AppSchema = require("./graphql/todoSchema");
+const AppSchema = require("./graphql/appSchema");
 const { createHandler } = require('graphql-http/lib/use/express');
 const expressPlayground = require('graphql-playground-middleware-express').default;
 require("dotenv").config();
