@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
-const db = require("./dbConnection.js");
+const AppSchema = require("./graphql/todoSchema");
+const { createHandler } = require('graphql-http/lib/use/express');
+const expressPlayground = require('graphql-playground-middleware-express').default;
 require("dotenv").config();
 
 if (!process.env.BACKEND_PORT) {console.info("BACKEND_PORT not specified in .env file, using default port 8080");}
@@ -19,6 +21,9 @@ app.use(express.json());
 app.get("/", (req, res) => {
   res.send("Welcome to Phillip's Convergence Concepts Back-end API");
 });
+
+app.all("/graphql", createHandler({schema: AppSchema}));
+app.get("/playground", expressPlayground({endpoint:"/graphql"}));
 
 app.listen(BACKEND_PORT, () => {
   console.log(`Server started on port: ${BACKEND_PORT}`);
