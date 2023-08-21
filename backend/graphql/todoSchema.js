@@ -1,6 +1,7 @@
 const graphql = require("graphql");
 const { GraphQLObjectType,  GraphQLString, GraphQLSchema, GraphQLEnumType, GraphQLList, } = graphql;
 const db = require("../dbConnection.js");
+const {ObjectId} = require("mongodb");
 todoCollection = db.collection("todos");
 
 const TodoStatusEnum = new GraphQLEnumType({
@@ -30,6 +31,24 @@ const MongoInsertType = new GraphQLObjectType({
   })
 })
 
+const MongoDeleteType = new GraphQLObjectType({
+  name: "MongoDelete",
+  fields: () => ({
+    acknowledged: { type: GraphQLString },
+    deletedCount: { type: GraphQLString },
+    error: { type: GraphQLString },
+  })
+})
+
+const MongoUpdateType = new GraphQLObjectType({
+  name: "MongoUpdate",
+  fields: () => ({
+    acknowledged: { type: GraphQLString },
+    modifiedCount: { type: GraphQLString },
+    error: { type: GraphQLString },
+  })
+})
+
 RootQuery = new GraphQLObjectType({
   name: "RootQueryType",
   fields: {
@@ -44,7 +63,7 @@ RootQuery = new GraphQLObjectType({
 });
 
 TodoMutations = new GraphQLObjectType({
-  name: "Mutation",
+  name: "TodoMutations",
   fields: {
     addTodo: {
       type: MongoInsertType,
@@ -59,6 +78,49 @@ TodoMutations = new GraphQLObjectType({
           return {
             acknowledged: response.acknowledged,
             insertedId: response.insertedId
+          }
+        } catch (error) {
+          console.log(error)
+          return {error: error.message}
+        }
+      }
+    },
+    deleteTodo: {
+      type: MongoDeleteType,
+      args: {
+        _id: { type: GraphQLString },
+      },
+      resolve: async (parent, {_id}) => {
+        try {
+          const response = await todoCollection.deleteOne({_id: new ObjectId(_id)})
+          return {
+            acknowledged: response.acknowledged,
+            deletedCount: response.deletedCount
+          }
+        } catch (error) {
+          console.log(error)
+          return {error: error.message}
+        }
+      }
+    },
+    updateTodo: {
+      type: MongoUpdateType,
+      args: {
+        _id: { type: GraphQLString },
+        title: { type: GraphQLString },
+        description: { type: GraphQLString },
+        status: { type: TodoStatusEnum },
+      },
+      resolve: async (parent, {_id, title, description, status}) => {
+        try {
+          const setObj = {}
+          if (title) setObj.title = title
+          if (description) setObj.description = description
+          if (status) setObj.status = status
+          const response = await todoCollection.updateOne({_id: new ObjectId(_id)}, {$set: setObj})
+          return {
+            acknowledged: response.acknowledged,
+            modifiedCount: response.modifiedCount,
           }
         } catch (error) {
           console.log(error)
