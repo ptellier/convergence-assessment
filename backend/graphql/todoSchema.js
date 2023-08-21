@@ -1,6 +1,5 @@
 const graphql = require("graphql");
 const { GraphQLObjectType,  GraphQLString, GraphQLSchema, GraphQLEnumType, GraphQLList, } = graphql;
-const { ObjectId: ObjectIdType } = require("graphql-scalars")
 const db = require("../dbConnection.js");
 todoCollection = db.collection("todos");
 
@@ -22,6 +21,15 @@ const TodoType = new GraphQLObjectType({
   })
 });
 
+const MongoInsertType = new GraphQLObjectType({
+  name: "MongoInsert",
+  fields: () => ({
+    acknowledged: { type: GraphQLString },
+    insertedId: { type: GraphQLString },
+    error: { type: GraphQLString },
+  })
+})
+
 RootQuery = new GraphQLObjectType({
   name: "RootQueryType",
   fields: {
@@ -39,16 +47,23 @@ TodoMutations = new GraphQLObjectType({
   name: "Mutation",
   fields: {
     addTodo: {
-      type: TodoType,
+      type: MongoInsertType,
       args: {
         title: { type: GraphQLString },
         description: { type: GraphQLString },
         status: { type: TodoStatusEnum },
       },
       resolve: async (parent, args) => {
-        const response = await todoCollection.insertOne(args)
-        console.log(response);
-        return response
+        try {
+          const response = await todoCollection.insertOne(args)
+          return {
+            acknowledged: response.acknowledged,
+            insertedId: response.insertedId
+          }
+        } catch (error) {
+          console.log(error)
+          return {error: error.message}
+        }
       }
     }
   }
