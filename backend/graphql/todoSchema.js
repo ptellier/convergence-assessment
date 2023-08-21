@@ -31,6 +31,15 @@ const TodoQueries = {
     resolve(_, args) {
       return todoCollection.find({}).toArray();
     }
+  },
+  getTodoByTitle: {
+    type: new GraphQLList(TodoType),
+    args: {
+      title: {type: GraphQLString},
+    },
+    resolve(_, {title}) {
+      return todoCollection.find({title: title}).toArray();
+    }
   }
 }
 
