@@ -27,7 +27,7 @@ const LoginType = new GraphQLObjectType({
 });
 
 const UserQueries = {
-  getAllTodos: {
+  getAllUsers: {
     type: new GraphQLList(UserType),
     args: {},
     resolve(_, args) {

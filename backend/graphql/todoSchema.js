@@ -3,6 +3,7 @@ const {GraphQLObjectType,  GraphQLString, GraphQLEnumType, GraphQLList} = graphq
 const db = require("../dbConnection.js");
 const {ObjectId} = require("mongodb");
 const {MongoUpdateType, MongoDeleteType, MongoInsertType} = require("./mongoTypes");
+const checkAuthorized = require("../authorization");
 todoCollection = db.collection("todos");
 
 const TodoStatusEnum = new GraphQLEnumType({
@@ -40,13 +41,19 @@ const TodoMutations = {
       title: {type: GraphQLString},
       description: {type: GraphQLString},
       status: {type: TodoStatusEnum},
+      access_token: {type: GraphQLString}
     },
-    resolve: async (parent, args) => {
+    resolve: async (parent, {title, description, status, access_token}) => {
       try {
-        const response = await todoCollection.insertOne(args)
+        const authCheck = await checkAuthorized(access_token);
+        if (authCheck.error) {
+          return {error: authCheck.error}
+        }
+        const username = authCheck.username;
+        const response = await todoCollection.insertOne({title, description, status, username});
         return {
           acknowledged: response.acknowledged,
-          insertedId: response.insertedId
+          insertedId: response.insertedId,
         }
       } catch (error) {
         console.log(error)
@@ -58,13 +65,21 @@ const TodoMutations = {
     type: MongoDeleteType,
     args: {
       _id: {type: GraphQLString},
+      access_token: {type: GraphQLString},
     },
-    resolve: async (parent, {_id}) => {
+    resolve: async (parent, {_id, access_token}) => {
       try {
-        const response = await todoCollection.deleteOne({_id: new ObjectId(_id)})
+        const authCheck = await checkAuthorized(access_token);
+        if (authCheck.error) {
+          return {error: authCheck.error}
+        }
+        const username = authCheck.username;
+        const responseFind = await todoCollection.findOne({_id: new ObjectId(_id)});
+        if (responseFind.username !== username) return {error: "Not authorized"}
+        const responseDelete = await todoCollection.deleteOne({_id: new ObjectId(_id)});
         return {
-          acknowledged: response.acknowledged,
-          deletedCount: response.deletedCount
+          acknowledged: responseDelete.acknowledged,
+          deletedCount: responseDelete.deletedCount
         }
       } catch (error) {
         console.log(error)
@@ -79,9 +94,17 @@ const TodoMutations = {
       title: {type: GraphQLString},
       description: {type: GraphQLString},
       status: {type: TodoStatusEnum},
+      access_token: {type: GraphQLString},
     },
-    resolve: async (parent, {_id, title, description, status}) => {
+    resolve: async (parent, {_id, title, description, status, access_token}) => {
       try {
+        const authCheck = await checkAuthorized(access_token);
+        if (authCheck.error) {
+          return {error: authCheck.error}
+        }
+        const username = authCheck.username;
+        const responseFind = await todoCollection.findOne({_id: new ObjectId(_id)});
+        if (responseFind.username !== username) return {error: "Not authorized"}
         const setObj = {}
         if (title) setObj.title = title
         if (description) setObj.description = description
